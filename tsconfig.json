@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -18,9 +14,16 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    // 👇 Quan trọng để alias hoạt động
+    "baseUrl": ".",
+    "paths": {
+      "@components/*": ["src/components/*"],
+      "@managers/*": ["src/managers/*"],
+      "@assets/*": ["src/assets/*"],
+      "@types/*": ["src/types/*"],
+      "@pages/*": ["src/pages/*"]
+    }
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

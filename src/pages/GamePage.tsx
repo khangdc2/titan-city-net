@@ -1,35 +1,23 @@
-import React, { useEffect, useState } from "react";
-
-interface NPC {
-  id: string;
-  x: number;
-  y: number;
-  name: string;
-  message: string;
-  zone: string;
-  task?: string;
-}
-
-interface Vehicle {
-  id: string;
-  x: number;
-  y: number;
-  label: string;
-  owner: string;
-}
+import React, { useEffect, useRef, useState } from "react";
+import { SpawnManager } from "@managers/SpawnManager";
+import { QuestManager } from "@managers/QuestManager";
+import DialogueBox from "@components/DialogueBox";
+import QuestLog from "@components/QuestLog";
+import type { Spawn, NPC, Vehicle } from "@types";
 
 export default function GamePage() {
   const [avatar, setAvatar] = useState<string | null>(null);
-  const [pos, setPos] = useState({ x: 200, y: 200 });
-  const [showDialogue, setShowDialogue] = useState(false);
+  const [playerPos, setPlayerPos] = useState({ x: 100, y: 100 });
+  const [zone, setZone] = useState("Unknown");
+  const [spawns, setSpawns] = useState<Spawn[]>([]);
+  const [questLog, setQuestLog] = useState<any[]>([]);
+  const [activeQuest, setActiveQuest] = useState<any | null>(null);
   const [dialogueText, setDialogueText] = useState("");
-  const [direction, setDirection] = useState<string | null>(null);
-  const [currentZone, setCurrentZone] = useState("Downtown");
-  const [currentMusic, setCurrentMusic] = useState<HTMLAudioElement | null>(null);
-  const [questLog, setQuestLog] = useState<string[]>([]);
-  const [activeQuest, setActiveQuest] = useState<string | null>(null);
+  const [showDialogue, setShowDialogue] = useState(false);
   const [selectedNPC, setSelectedNPC] = useState<NPC | null>(null);
-  const [autoMoveTarget, setAutoMoveTarget] = useState<{ x: number; y: number } | null>(null);
+
+  const spawnManager = useRef<SpawnManager | null>(null);
+  const questManager = useRef<QuestManager | null>(null);
 
   const npcs: NPC[] = [
     {
@@ -58,6 +46,15 @@ export default function GamePage() {
       message: "Even the silent are part of this city's heartbeat.",
       zone: "Downtown",
     },
+    {
+      id: "npc-thiensu",
+      x: 950,
+      y: 700,
+      name: "Thiền Sư",
+      message: "Phật pháp vô biên. Con đường ngộ đạo bắt đầu từ tâm.",
+      zone: "Pagoda",
+      task: "Thiền định tại chánh điện."
+    }
   ];
 
   const vehicles: Vehicle[] = [
@@ -76,83 +73,80 @@ export default function GamePage() {
   }, []);
 
   useEffect(() => {
-    const handleMove = (e: KeyboardEvent) => {
-      setDirection(e.key);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setPlayerPos((prev) => {
+        const baseSpeed = 10;
+        const speed = e.shiftKey ? baseSpeed * 2 : baseSpeed;
+        switch (e.key) {
+          case "ArrowUp": return { ...prev, y: prev.y - speed };
+          case "ArrowDown": return { ...prev, y: prev.y + speed };
+          case "ArrowLeft": return { ...prev, x: prev.x - speed };
+          case "ArrowRight": return { ...prev, x: prev.x + speed };
+          case " ": return { ...prev, y: prev.y - speed * 3 }; // jump with spacebar
+          default: return prev;
+        }
+      });
     };
-    window.addEventListener("keydown", handleMove);
-    return () => window.removeEventListener("keydown", handleMove);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
+    const z =
+      playerPos.x > 900 ? "Pagoda" :
+      playerPos.x > 600 ? "Solar Park" :
+      "Downtown";
+    setZone(z);
+  }, [playerPos]);
+
+  useEffect(() => {
+    if (!spawnManager.current) {
+      spawnManager.current = new SpawnManager(() => playerPos, () => zone);
+      spawnManager.current.start();
+    }
+
     const interval = setInterval(() => {
-      setPos((prev) => {
-        const speed = 5;
-        const next = { ...prev };
+      setSpawns(spawnManager.current!.getSpawnsInZone(zone));
+    }, 2000);
 
-        if (autoMoveTarget) {
-          const dx = autoMoveTarget.x - next.x;
-          const dy = autoMoveTarget.y - next.y;
-          if (Math.abs(dx) < speed && Math.abs(dy) < speed) {
-            setAutoMoveTarget(null);
-            return next;
-          }
-          if (Math.abs(dx) > speed) next.x += dx > 0 ? speed : -speed;
-          if (Math.abs(dy) > speed) next.y += dy > 0 ? speed : -speed;
-        } else if (direction) {
-          switch (direction) {
-            case "ArrowUp":
-              next.y -= speed;
-              break;
-            case "ArrowDown":
-              next.y += speed;
-              break;
-            case "ArrowLeft":
-              next.x -= speed;
-              break;
-            case "ArrowRight":
-              next.x += speed;
-              break;
-          }
-        }
-
-        const zone = next.x < 600 ? "Downtown" : "Solar Park";
-        if (zone !== currentZone) {
-          setCurrentZone(zone);
-          if (currentMusic) {
-            currentMusic.volume = 0;
-            currentMusic.pause();
-          }
-          const music = new Audio(zone === "Downtown" ? "/downtown.mp3" : "/solarpark.mp3");
-          music.loop = true;
-          music.volume = 0.5;
-          music.play();
-          setCurrentMusic(music);
-        }
-
-        return next;
-      });
-    }, 50);
     return () => clearInterval(interval);
-  }, [direction, currentZone, currentMusic, autoMoveTarget]);
+  }, [playerPos, zone]);
+
+  useEffect(() => {
+    if (!questManager.current) {
+      questManager.current = new QuestManager((q) => setQuestLog(q));
+    }
+    setActiveQuest(questManager.current.getActive());
+  }, []);
+
+  useEffect(() => {
+    if (zone === "Pagoda" && activeQuest?.id === "quest-npc-thiensu") {
+      const timer = setTimeout(() => {
+        questManager.current?.completeQuest();
+        alert("Bạn đã ngộ đạo 🌸");
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [zone, activeQuest]);
 
   const handleNPCClick = (npc: NPC) => {
-    const beep = new Audio("/beep.mp3");
-    beep.volume = 0.3;
-    beep.play();
     setSelectedNPC(npc);
     setDialogueText(`${npc.message}${npc.task ? `\nTask: ${npc.task}` : ""}`);
     setShowDialogue(true);
   };
 
   const acceptQuest = () => {
-    if (selectedNPC?.task && !questLog.includes(selectedNPC.task)) {
-      setQuestLog((prev) => [...prev, selectedNPC.task!]);
-      setActiveQuest(selectedNPC.task);
-
-      const nextNPC = npcs.find((n) => n.name === "Luna");
-      if (nextNPC) {
-        setAutoMoveTarget({ x: nextNPC.x, y: nextNPC.y });
-      }
+    if (selectedNPC?.task) {
+      questManager.current?.acceptQuest({
+        id: `quest-${selectedNPC.id}`,
+        title: selectedNPC.task,
+        description: selectedNPC.message,
+        giverNpcId: selectedNPC.id,
+        targetZone: selectedNPC.zone,
+        objective: selectedNPC.task,
+      });
+      setActiveQuest(questManager.current?.getActive() ?? null);
     }
     setShowDialogue(false);
   };
@@ -160,17 +154,23 @@ export default function GamePage() {
   if (!avatar) return <div className="text-white p-10">Loading...</div>;
 
   return (
-    <div className="w-screen h-screen bg-gray-950 relative overflow-hidden">
-      <h2 className="text-white text-xl p-4">TitanCity - {currentZone}</h2>
+    <div className="relative w-screen h-screen bg-gray-950 overflow-hidden">
+      <h2 className="text-white text-xl p-4">TitanCity - {zone}</h2>
+
+      {/* Minimap */}
+      <div className="absolute top-4 left-4 bg-gray-800 border border-gray-600 rounded-md p-2 w-32 h-32">
+        <div className="relative w-full h-full bg-black">
+          <div
+            className="absolute w-2 h-2 bg-teal-400 rounded-full"
+            style={{ top: playerPos.y / 10, left: playerPos.x / 10 }}
+          />
+        </div>
+      </div>
 
       {/* Player Avatar */}
       <div
-        style={{
-          position: "absolute",
-          top: pos.y,
-          left: pos.x,
-          transition: "top 0.05s, left 0.05s",
-        }}
+        style={{ position: "absolute", top: playerPos.y, left: playerPos.x }}
+        className="z-20"
       >
         <img
           src={avatar}
@@ -183,12 +183,7 @@ export default function GamePage() {
         <div
           key={npc.id}
           onClick={() => handleNPCClick(npc)}
-          style={{
-            position: "absolute",
-            top: npc.y,
-            left: npc.x,
-            cursor: "pointer",
-          }}
+          style={{ position: "absolute", top: npc.y, left: npc.x, cursor: "pointer" }}
         >
           <div className="w-16 h-16 bg-purple-700 rounded-full flex items-center justify-center text-white font-bold border-4 border-purple-300 hover:scale-110 transition">
             {npc.name}
@@ -207,36 +202,30 @@ export default function GamePage() {
         </div>
       ))}
 
-      {/* Dialogue Box */}
-      {showDialogue && (
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white p-4 rounded-xl shadow-lg max-w-md text-center animate-bounce">
-          <p className="text-sm italic whitespace-pre-line mb-2">{dialogueText}</p>
-          {selectedNPC?.task && (
-            <button
-              onClick={acceptQuest}
-              className="bg-teal-500 hover:bg-teal-400 text-white py-1 px-4 rounded-full text-sm"
-            >
-              Accept Quest
-            </button>
-          )}
+      {/* Spawns */}
+      {spawns.map((spawn) => (
+        <div
+          key={spawn.id}
+          style={{ position: "absolute", top: spawn.lat, left: spawn.lng, cursor: "pointer" }}
+          className="text-xl animate-bounce z-10"
+          onClick={() => alert(`Bạn đụng ${spawn.type} ${spawn.id.slice(0, 4)}`)}
+        >
+          {spawn.type === "creature" ? "🐉" : spawn.type === "item" ? "💎" : "⚡"}
         </div>
+      ))}
+
+      {/* Dialogue Box */}
+      {showDialogue && selectedNPC && (
+        <DialogueBox
+          message={dialogueText}
+          onAccept={selectedNPC.task ? acceptQuest : undefined}
+          onClose={() => setShowDialogue(false)}
+          showButton={!!selectedNPC.task}
+        />
       )}
 
       {/* Quest Log */}
-      <div className="absolute top-4 right-4 bg-gray-800 text-white p-3 rounded-lg shadow-lg w-64">
-        <h3 className="text-md font-bold mb-2">📜 Quest Log</h3>
-        {questLog.length === 0 ? (
-          <p className="text-sm text-gray-400">No active quests.</p>
-        ) : (
-          <ul className="list-disc list-inside text-sm space-y-1">
-            {questLog.map((quest, index) => (
-              <li key={index} className={quest === activeQuest ? "text-teal-400" : ""}>
-                {quest}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <QuestLog quests={questLog} activeQuestId={activeQuest?.id} />
     </div>
   );
 }
