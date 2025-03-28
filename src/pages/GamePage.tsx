@@ -17,7 +17,6 @@ import AttackRange from "@components/AttackRange";
 import CameraContainer from "@components/CameraContainer";
 import WorldLayer from "@components/WorldLayer";
 import WorldPlayer from "@components/WorldPlayer";
-
 export default function GamePage() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [playerPos, setPlayerPos] = useState({ x: 100, y: 100 });
@@ -32,10 +31,8 @@ export default function GamePage() {
   const [showSkillPanel, setShowSkillPanel] = useState(false);
   const [zoom, setZoom] = useState(1);
   const zoomPercent = Math.round(zoom * 100);
-
   const spawnManager = useRef<SpawnManager | null>(null);
   const questManager = useRef<QuestManager | null>(null);
-
   useEffect(() => {
     const followInterval = setInterval(() => {
       setPetPos((prev) => {
@@ -52,7 +49,6 @@ export default function GamePage() {
     }, 100);
     return () => clearInterval(followInterval);
   }, [playerPos]);
-
   useEffect(() => {
     const handlePreventScroll = (e: KeyboardEvent) => {
       const keys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
@@ -70,7 +66,6 @@ export default function GamePage() {
       window.removeEventListener("touchmove", preventDefault);
     };
   }, []);
-
   return (
     <CameraContainer playerPos={playerPos} zoom={zoom}>
       <DebugOverlay x={playerPos.x} y={playerPos.y} zone={zone} spawnCount={spawns.length} />
@@ -80,12 +75,15 @@ export default function GamePage() {
       <WorldLayer
         playerPos={playerPos}
         avatar={avatar!}
-        npcs={[]}
+        npcs={npcs} // ✅ sửa dòng này
         spawns={spawns}
-        onClickNPC={() => {}}
+        onClickNPC={(npc) => {
+          setSelectedNPC(npc);
+          setDialogueText(`${npc.message}${npc.task ? `\nTask: ${npc.task}` : ""}`);
+          setShowDialogue(true);
+        }}
         onClickSpawn={() => {}}
       />
-      <WorldPlayer petPos={petPos} />
       <AttackRange x={playerPos.x} y={playerPos.y} radius={80} />
       <Vehicles vehicles={[{ id: "bike-luna", x: 740, y: 500, label: "🚲 Luna's AI Bike", owner: "Luna" }]} />
       <QuestLog quests={questLog} activeQuestId={activeQuest?.id} />

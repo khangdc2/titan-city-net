@@ -1,5 +1,4 @@
 import React from "react";
-
 export default function Pet({ x, y }: { x: number; y: number }) {
   return (
     <div

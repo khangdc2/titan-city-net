@@ -1,11 +1,9 @@
 import React from "react";
 import type { NPC } from "@types";
-
 interface Props {
   npcs: NPC[];
   onClick: (npc: NPC) => void;
 }
-
 export default function NPCList({ npcs, onClick }: Props) {
   return (
     <>
