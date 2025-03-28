@@ -1,9 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
+import DebugOverlay from "@components/DebugOverlay";
 import { SpawnManager } from "@managers/SpawnManager";
 import { QuestManager } from "@managers/QuestManager";
 import DialogueBox from "@components/DialogueBox";
 import QuestLog from "@components/QuestLog";
+import GameUI from "@components/GameUI";
+import SkillPanel from "@components/SkillPanel";
+import PlayerAvatar from "@components/PlayerAvatar";
+import NPCList from "@components/NPCList";
+import SpawnEntities from "@components/SpawnEntities";
 import type { Spawn, NPC, Vehicle } from "@types";
+import Vehicles from "@components/Vehicles";
 
 export default function GamePage() {
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -15,9 +22,54 @@ export default function GamePage() {
   const [dialogueText, setDialogueText] = useState("");
   const [showDialogue, setShowDialogue] = useState(false);
   const [selectedNPC, setSelectedNPC] = useState<NPC | null>(null);
+  const [showSkillPanel, setShowSkillPanel] = useState(false);
 
   const spawnManager = useRef<SpawnManager | null>(null);
   const questManager = useRef<QuestManager | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setPlayerPos((prev) => {
+        const baseSpeed = 10;
+        const speed = e.shiftKey ? baseSpeed * 2 : baseSpeed;
+        switch (e.key) {
+          case "ArrowUp": return { ...prev, y: prev.y - speed };
+          case "ArrowDown": return { ...prev, y: prev.y + speed };
+          case "ArrowLeft": return { ...prev, x: prev.x - speed };
+          case "ArrowRight": return { ...prev, x: prev.x + speed };
+          case " ": return { ...prev, y: prev.y - speed * 3 }; // jump
+          default: return prev;
+        }
+      });
+
+      if (/^[1-6]$/.test(e.key)) {
+        const nearest = spawns.reduce((closest, spawn) => {
+          const dist = Math.hypot(spawn.lat - playerPos.y, spawn.lng - playerPos.x);
+          const closestDist = closest ? Math.hypot(closest.lat - playerPos.y, closest.lng - playerPos.x) : Infinity;
+          return dist < closestDist ? spawn : closest;
+        }, null as Spawn | null);
+
+        if (nearest) {
+          alert(`🔥 Thi triển kỹ năng ${e.key} lên ${nearest.type} ${nearest.id.slice(0, 4)}`);
+        } else {
+          alert("❌ Không có mục tiêu trong phạm vi!");
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [playerPos, spawns]);
+
+  useEffect(() => {
+    const handleKeyToggle = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === "k") {
+        setShowSkillPanel(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyToggle);
+    return () => window.removeEventListener("keydown", handleKeyToggle);
+  }, []);
 
   const npcs: NPC[] = [
     {
@@ -54,177 +106,55 @@ export default function GamePage() {
       message: "Phật pháp vô biên. Con đường ngộ đạo bắt đầu từ tâm.",
       zone: "Pagoda",
       task: "Thiền định tại chánh điện."
-    }
-  ];
-
-  const vehicles: Vehicle[] = [
+    },
     {
-      id: "bike-luna",
-      x: 740,
-      y: 500,
-      label: "🚲 Luna's AI Bike",
-      owner: "Luna"
+      id: "npc-tieuphu",
+      x: 50,
+      y: 300,
+      name: "Tiều Phu",
+      message: "Long Tuyền là vùng đất thanh bình. Muốn vào thành hãy đi về phía Đông!",
+      zone: "Long Tuyền Thôn"
     }
   ];
-
-  useEffect(() => {
-    const saved = localStorage.getItem("titanCityAvatar");
-    if (saved) setAvatar(saved);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      setPlayerPos((prev) => {
-        const baseSpeed = 10;
-        const speed = e.shiftKey ? baseSpeed * 2 : baseSpeed;
-        switch (e.key) {
-          case "ArrowUp": return { ...prev, y: prev.y - speed };
-          case "ArrowDown": return { ...prev, y: prev.y + speed };
-          case "ArrowLeft": return { ...prev, x: prev.x - speed };
-          case "ArrowRight": return { ...prev, x: prev.x + speed };
-          case " ": return { ...prev, y: prev.y - speed * 3 }; // jump with spacebar
-          default: return prev;
-        }
-      });
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const z =
-      playerPos.x > 900 ? "Pagoda" :
-      playerPos.x > 600 ? "Solar Park" :
-      "Downtown";
-    setZone(z);
-  }, [playerPos]);
-
-  useEffect(() => {
-    if (!spawnManager.current) {
-      spawnManager.current = new SpawnManager(() => playerPos, () => zone);
-      spawnManager.current.start();
-    }
-
-    const interval = setInterval(() => {
-      setSpawns(spawnManager.current!.getSpawnsInZone(zone));
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [playerPos, zone]);
-
-  useEffect(() => {
-    if (!questManager.current) {
-      questManager.current = new QuestManager((q) => setQuestLog(q));
-    }
-    setActiveQuest(questManager.current.getActive());
-  }, []);
-
-  useEffect(() => {
-    if (zone === "Pagoda" && activeQuest?.id === "quest-npc-thiensu") {
-      const timer = setTimeout(() => {
-        questManager.current?.completeQuest();
-        alert("Bạn đã ngộ đạo 🌸");
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [zone, activeQuest]);
-
-  const handleNPCClick = (npc: NPC) => {
-    setSelectedNPC(npc);
-    setDialogueText(`${npc.message}${npc.task ? `\nTask: ${npc.task}` : ""}`);
-    setShowDialogue(true);
-  };
-
-  const acceptQuest = () => {
-    if (selectedNPC?.task) {
-      questManager.current?.acceptQuest({
-        id: `quest-${selectedNPC.id}`,
-        title: selectedNPC.task,
-        description: selectedNPC.message,
-        giverNpcId: selectedNPC.id,
-        targetZone: selectedNPC.zone,
-        objective: selectedNPC.task,
-      });
-      setActiveQuest(questManager.current?.getActive() ?? null);
-    }
-    setShowDialogue(false);
-  };
-
-  if (!avatar) return <div className="text-white p-10">Loading...</div>;
 
   return (
     <div className="relative w-screen h-screen bg-gray-950 overflow-hidden">
-      <h2 className="text-white text-xl p-4">TitanCity - {zone}</h2>
-
-      {/* Minimap */}
-      <div className="absolute top-4 left-4 bg-gray-800 border border-gray-600 rounded-md p-2 w-32 h-32">
-        <div className="relative w-full h-full bg-black">
-          <div
-            className="absolute w-2 h-2 bg-teal-400 rounded-full"
-            style={{ top: playerPos.y / 10, left: playerPos.x / 10 }}
-          />
-        </div>
-      </div>
-
-      {/* Player Avatar */}
-      <div
-        style={{ position: "absolute", top: playerPos.y, left: playerPos.x }}
-        className="z-20"
-      >
-        <img
-          src={avatar}
-          className="w-16 h-16 rounded-full border-4 border-teal-400 animate-pulse"
-        />
-      </div>
-
-      {/* NPCs */}
-      {npcs.map((npc) => (
-        <div
-          key={npc.id}
-          onClick={() => handleNPCClick(npc)}
-          style={{ position: "absolute", top: npc.y, left: npc.x, cursor: "pointer" }}
-        >
-          <div className="w-16 h-16 bg-purple-700 rounded-full flex items-center justify-center text-white font-bold border-4 border-purple-300 hover:scale-110 transition">
-            {npc.name}
-          </div>
-        </div>
-      ))}
-
-      {/* Vehicles */}
-      {vehicles.map((v) => (
-        <div
-          key={v.id}
-          style={{ position: "absolute", top: v.y, left: v.x }}
-          className="text-yellow-300 text-sm animate-bounce"
-        >
-          {v.label}
-        </div>
-      ))}
-
-      {/* Spawns */}
-      {spawns.map((spawn) => (
-        <div
-          key={spawn.id}
-          style={{ position: "absolute", top: spawn.lat, left: spawn.lng, cursor: "pointer" }}
-          className="text-xl animate-bounce z-10"
-          onClick={() => alert(`Bạn đụng ${spawn.type} ${spawn.id.slice(0, 4)}`)}
-        >
-          {spawn.type === "creature" ? "🐉" : spawn.type === "item" ? "💎" : "⚡"}
-        </div>
-      ))}
-
-      {/* Dialogue Box */}
+      <DebugOverlay x={playerPos.x} y={playerPos.y} zone={zone} spawnCount={spawns.length} />
+      {showSkillPanel && <SkillPanel />}
+      <GameUI avatar={avatar!} zone={zone} />
+      <PlayerAvatar avatar={avatar!} x={playerPos.x} y={playerPos.y} />
+      <NPCList
+        npcs={npcs}
+        onClick={(npc) => {
+          setSelectedNPC(npc);
+          setDialogueText(`${npc.message}${npc.task ? `\nTask: ${npc.task}` : ""}`);
+          setShowDialogue(true);
+        }}
+      />
+      <SpawnEntities
+        spawns={spawns}
+        onClick={(spawn) => alert(`Bạn đụng ${spawn.type} ${spawn.id.slice(0, 4)}`)}
+      />
+      <Vehicles vehicles={[{ id: "bike-luna", x: 740, y: 500, label: "🚲 Luna's AI Bike", owner: "Luna" }]} />
       {showDialogue && selectedNPC && (
         <DialogueBox
           message={dialogueText}
-          onAccept={selectedNPC.task ? acceptQuest : undefined}
+          onAccept={selectedNPC.task ? () => {
+            questManager.current?.acceptQuest({
+              id: `quest-${selectedNPC.id}`,
+              title: selectedNPC.task,
+              description: selectedNPC.message,
+              giverNpcId: selectedNPC.id,
+              targetZone: selectedNPC.zone,
+              objective: selectedNPC.task,
+            });
+            setActiveQuest(questManager.current?.getActive() ?? null);
+            setShowDialogue(false);
+          } : undefined}
           onClose={() => setShowDialogue(false)}
           showButton={!!selectedNPC.task}
         />
       )}
-
-      {/* Quest Log */}
       <QuestLog quests={questLog} activeQuestId={activeQuest?.id} />
     </div>
   );
