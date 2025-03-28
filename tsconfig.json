@@ -18,6 +18,7 @@
     // 👇 Quan trọng để alias hoạt động
     "baseUrl": ".",
     "paths": {
+      "@hooks/*": ["src/hooks/*"],
       "@components/*": ["src/components/*"],
       "@managers/*": ["src/managers/*"],
       "@assets/*": ["src/assets/*"],

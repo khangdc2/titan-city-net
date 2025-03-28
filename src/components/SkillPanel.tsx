@@ -4,7 +4,6 @@ import { QuestManager } from "@managers/QuestManager";
 import DialogueBox from "@components/DialogueBox";
 import QuestLog from "@components/QuestLog";
 import GameUI from "@components/GameUI";
-import useMovementControls from "@hooks/useMovementControls";
 import type { Spawn, NPC, Vehicle } from "@types";
 
 export default function GamePage() {

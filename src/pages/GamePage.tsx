@@ -11,6 +11,11 @@ import NPCList from "@components/NPCList";
 import SpawnEntities from "@components/SpawnEntities";
 import type { Spawn, NPC, Vehicle } from "@types";
 import Vehicles from "@components/Vehicles";
+import MiniMap from "@components/MiniMap";
+import ZoomIndicator from "@components/ZoomIndicator";
+import AttackRange from "@components/AttackRange";
+import CameraContainer from "@components/CameraContainer";
+import WorldLayer from "@components/WorldLayer";
 
 export default function GamePage() {
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -23,6 +28,8 @@ export default function GamePage() {
   const [showDialogue, setShowDialogue] = useState(false);
   const [selectedNPC, setSelectedNPC] = useState<NPC | null>(null);
   const [showSkillPanel, setShowSkillPanel] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const zoomPercent = Math.round(zoom * 100);
 
   const spawnManager = useRef<SpawnManager | null>(null);
   const questManager = useRef<QuestManager | null>(null);
@@ -68,6 +75,14 @@ export default function GamePage() {
       }
     };
     window.addEventListener("keydown", handleKeyToggle);
+
+    window.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "+" || e.key === "=") {
+        setZoom((z) => Math.min(z + 0.1, 2));
+      } else if (e.key === "-" || e.key === "_") {
+        setZoom((z) => Math.max(z - 0.1, 0.5));
+      }
+    });
     return () => window.removeEventListener("keydown", handleKeyToggle);
   }, []);
 
@@ -118,24 +133,25 @@ export default function GamePage() {
   ];
 
   return (
-    <div className="relative w-screen h-screen bg-gray-950 overflow-hidden">
+    <CameraContainer playerPos={playerPos} zoom={zoom}>
       <DebugOverlay x={playerPos.x} y={playerPos.y} zone={zone} spawnCount={spawns.length} />
+      <MiniMap playerPos={playerPos} />
       {showSkillPanel && <SkillPanel />}
       <GameUI avatar={avatar!} zone={zone} />
-      <PlayerAvatar avatar={avatar!} x={playerPos.x} y={playerPos.y} />
-      <NPCList
+      <WorldLayer
+        playerPos={playerPos}
+        avatar={avatar!}
         npcs={npcs}
-        onClick={(npc) => {
+        spawns={spawns}
+        onClickNPC={(npc) => {
           setSelectedNPC(npc);
           setDialogueText(`${npc.message}${npc.task ? `\nTask: ${npc.task}` : ""}`);
           setShowDialogue(true);
         }}
-      />
-      <SpawnEntities
-        spawns={spawns}
-        onClick={(spawn) => alert(`Bạn đụng ${spawn.type} ${spawn.id.slice(0, 4)}`)}
+        onClickSpawn={(spawn) => alert(`Bạn đụng ${spawn.type} ${spawn.id.slice(0, 4)}`)}
       />
       <Vehicles vehicles={[{ id: "bike-luna", x: 740, y: 500, label: "🚲 Luna's AI Bike", owner: "Luna" }]} />
+      <AttackRange x={playerPos.x} y={playerPos.y} radius={80} />
       {showDialogue && selectedNPC && (
         <DialogueBox
           message={dialogueText}
@@ -156,6 +172,7 @@ export default function GamePage() {
         />
       )}
       <QuestLog quests={questLog} activeQuestId={activeQuest?.id} />
-    </div>
+      <ZoomIndicator zoom={zoomPercent} />
+    </CameraContainer>
   );
 }
