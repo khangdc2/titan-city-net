@@ -1,46 +1,77 @@
-# Getting Started with Create React App
+# 🌆 Titan City Net — Game UI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Metaverse-style experimental game UI inspired by Võ Lâm Truyền Kỳ (VLTK) and Pokémon Go, built with React + Tailwind + modular components.
 
-## Available Scripts
+![TitanCity Demo](https://github.com/khangdc2/titan-city-net/assets/preview.png)
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## 🎮 Tính năng
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- 👤 Chọn avatar từ màn hình landing
+- 🗺️ Map nhiều zone (Downtown, Solar Park, Pagoda, Long Tuyền Thôn)
+- 🧙 NPC có đối thoại + nhiệm vụ
+- ⚔️ Skill (1–6) + thi triển vào spawn gần nhất
+- 🎯 Tầm đánh hiển thị vòng tròn
+- 🔍 Zoom in/out bằng phím `+` / `-`
+- 🧘 Thiền định tại Pagoda để ngộ đạo 🌸
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+---
 
-### `npm test`
+## 🚀 Cài đặt & chạy
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+# Clone & install
+git clone https://github.com/khangdc2/titan-city-net.git
+cd titan-city-net
+npm install
 
-### `npm run build`
+# Chạy dev server
+npm run dev
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+---
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 🎨 Tech stack
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **React 18** + Vite
+- **TailwindCSS** UI framework
+- **TypeScript** & module alias (`@components`, `@managers`, ...)
+- Sound effects (sắp tới)
+- Modular game loop & managers
 
-### `npm run eject`
+---
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## 🗂️ Cấu trúc thư mục
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+src/
+  ├─ components/       // UI components (MiniMap, DialogueBox, ...)
+  ├─ managers/         // Game logic (SpawnManager, QuestManager)
+  ├─ pages/            // Main GamePage.tsx
+  ├─ types/            // Type declarations for NPC, Spawn, ...
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+---
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## ✨ Đóng góp / Triển khai tiếp
 
-## Learn More
+Mình đang phát triển tiếp:
+- 🎵 Ambience âm thanh cho từng zone
+- 💬 Hệ thống hội thoại nhiều nhánh
+- 📦 Túi đồ / vật phẩm / quái rớt
+- 🌐 Multiplayer Realtime + Mapbox GPS
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 💚 Đóng góp bởi
+
+> Made with energy, coffee & countryside rice 🌾  
+> Code cùng ChatGPT & cộng đồng Titan-Citi-Net  
+> GitHub: [@khangdc2](https://github.com/khangdc2)
+
+---
+
+## License
+
+MIT

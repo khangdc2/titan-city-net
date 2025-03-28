@@ -16,10 +16,12 @@ import ZoomIndicator from "@components/ZoomIndicator";
 import AttackRange from "@components/AttackRange";
 import CameraContainer from "@components/CameraContainer";
 import WorldLayer from "@components/WorldLayer";
+import WorldPlayer from "@components/WorldPlayer";
 
 export default function GamePage() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [playerPos, setPlayerPos] = useState({ x: 100, y: 100 });
+  const [petPos, setPetPos] = useState({ x: 120, y: 120 });
   const [zone, setZone] = useState("Unknown");
   const [spawns, setSpawns] = useState<Spawn[]>([]);
   const [questLog, setQuestLog] = useState<any[]>([]);
@@ -35,102 +37,39 @@ export default function GamePage() {
   const questManager = useRef<QuestManager | null>(null);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      setPlayerPos((prev) => {
-        const baseSpeed = 10;
-        const speed = e.shiftKey ? baseSpeed * 2 : baseSpeed;
-        switch (e.key) {
-          case "ArrowUp": return { ...prev, y: prev.y - speed };
-          case "ArrowDown": return { ...prev, y: prev.y + speed };
-          case "ArrowLeft": return { ...prev, x: prev.x - speed };
-          case "ArrowRight": return { ...prev, x: prev.x + speed };
-          case " ": return { ...prev, y: prev.y - speed * 3 }; // jump
-          default: return prev;
-        }
+    const followInterval = setInterval(() => {
+      setPetPos((prev) => {
+        const dx = playerPos.x - prev.x;
+        const dy = playerPos.y - prev.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const speed = 2;
+        if (dist < 5) return prev;
+        return {
+          x: prev.x + (dx / dist) * speed,
+          y: prev.y + (dy / dist) * speed,
+        };
       });
-
-      if (/^[1-6]$/.test(e.key)) {
-        const nearest = spawns.reduce((closest, spawn) => {
-          const dist = Math.hypot(spawn.lat - playerPos.y, spawn.lng - playerPos.x);
-          const closestDist = closest ? Math.hypot(closest.lat - playerPos.y, closest.lng - playerPos.x) : Infinity;
-          return dist < closestDist ? spawn : closest;
-        }, null as Spawn | null);
-
-        if (nearest) {
-          alert(`🔥 Thi triển kỹ năng ${e.key} lên ${nearest.type} ${nearest.id.slice(0, 4)}`);
-        } else {
-          alert("❌ Không có mục tiêu trong phạm vi!");
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [playerPos, spawns]);
+    }, 100);
+    return () => clearInterval(followInterval);
+  }, [playerPos]);
 
   useEffect(() => {
-    const handleKeyToggle = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "k") {
-        setShowSkillPanel(prev => !prev);
+    const handlePreventScroll = (e: KeyboardEvent) => {
+      const keys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "];
+      if (keys.includes(e.key)) {
+        e.preventDefault();
       }
     };
-    window.addEventListener("keydown", handleKeyToggle);
-
-    window.addEventListener("keydown", (e: KeyboardEvent) => {
-      if (e.key === "+" || e.key === "=") {
-        setZoom((z) => Math.min(z + 0.1, 2));
-      } else if (e.key === "-" || e.key === "_") {
-        setZoom((z) => Math.max(z - 0.1, 0.5));
-      }
-    });
-    return () => window.removeEventListener("keydown", handleKeyToggle);
+    const preventDefault = (e: Event) => e.preventDefault();
+    window.addEventListener("keydown", handlePreventScroll);
+    window.addEventListener("wheel", preventDefault, { passive: false });
+    window.addEventListener("touchmove", preventDefault, { passive: false });
+    return () => {
+      window.removeEventListener("keydown", handlePreventScroll);
+      window.removeEventListener("wheel", preventDefault);
+      window.removeEventListener("touchmove", preventDefault);
+    };
   }, []);
-
-  const npcs: NPC[] = [
-    {
-      id: "npc-ap",
-      x: 400,
-      y: 300,
-      name: "AP",
-      message: "Welcome to TitanCity! This city runs on clean energy and code.",
-      zone: "Downtown",
-      task: "Visit Luna in Solar Park."
-    },
-    {
-      id: "npc-luna",
-      x: 700,
-      y: 500,
-      name: "Luna",
-      message: "The solar fields are expanding every cycle!",
-      zone: "Solar Park",
-      task: "Collect solar crystals."
-    },
-    {
-      id: "npc-anon",
-      x: 300,
-      y: 150,
-      name: "???",
-      message: "Even the silent are part of this city's heartbeat.",
-      zone: "Downtown",
-    },
-    {
-      id: "npc-thiensu",
-      x: 950,
-      y: 700,
-      name: "Thiền Sư",
-      message: "Phật pháp vô biên. Con đường ngộ đạo bắt đầu từ tâm.",
-      zone: "Pagoda",
-      task: "Thiền định tại chánh điện."
-    },
-    {
-      id: "npc-tieuphu",
-      x: 50,
-      y: 300,
-      name: "Tiều Phu",
-      message: "Long Tuyền là vùng đất thanh bình. Muốn vào thành hãy đi về phía Đông!",
-      zone: "Long Tuyền Thôn"
-    }
-  ];
 
   return (
     <CameraContainer playerPos={playerPos} zoom={zoom}>
@@ -141,36 +80,14 @@ export default function GamePage() {
       <WorldLayer
         playerPos={playerPos}
         avatar={avatar!}
-        npcs={npcs}
+        npcs={[]}
         spawns={spawns}
-        onClickNPC={(npc) => {
-          setSelectedNPC(npc);
-          setDialogueText(`${npc.message}${npc.task ? `\nTask: ${npc.task}` : ""}`);
-          setShowDialogue(true);
-        }}
-        onClickSpawn={(spawn) => alert(`Bạn đụng ${spawn.type} ${spawn.id.slice(0, 4)}`)}
+        onClickNPC={() => {}}
+        onClickSpawn={() => {}}
       />
-      <Vehicles vehicles={[{ id: "bike-luna", x: 740, y: 500, label: "🚲 Luna's AI Bike", owner: "Luna" }]} />
+      <WorldPlayer petPos={petPos} />
       <AttackRange x={playerPos.x} y={playerPos.y} radius={80} />
-      {showDialogue && selectedNPC && (
-        <DialogueBox
-          message={dialogueText}
-          onAccept={selectedNPC.task ? () => {
-            questManager.current?.acceptQuest({
-              id: `quest-${selectedNPC.id}`,
-              title: selectedNPC.task,
-              description: selectedNPC.message,
-              giverNpcId: selectedNPC.id,
-              targetZone: selectedNPC.zone,
-              objective: selectedNPC.task,
-            });
-            setActiveQuest(questManager.current?.getActive() ?? null);
-            setShowDialogue(false);
-          } : undefined}
-          onClose={() => setShowDialogue(false)}
-          showButton={!!selectedNPC.task}
-        />
-      )}
+      <Vehicles vehicles={[{ id: "bike-luna", x: 740, y: 500, label: "🚲 Luna's AI Bike", owner: "Luna" }]} />
       <QuestLog quests={questLog} activeQuestId={activeQuest?.id} />
       <ZoomIndicator zoom={zoomPercent} />
     </CameraContainer>
