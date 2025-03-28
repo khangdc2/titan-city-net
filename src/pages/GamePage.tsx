@@ -3,6 +3,8 @@ import { SpawnManager } from "@managers/SpawnManager";
 import { QuestManager } from "@managers/QuestManager";
 import DialogueBox from "@components/DialogueBox";
 import QuestLog from "@components/QuestLog";
+import GameUI from "@components/GameUI";
+import useMovementControls from "@hooks/useMovementControls";
 import type { Spawn, NPC, Vehicle } from "@types";
 
 export default function GamePage() {
@@ -18,6 +20,8 @@ export default function GamePage() {
 
   const spawnManager = useRef<SpawnManager | null>(null);
   const questManager = useRef<QuestManager | null>(null);
+
+  useMovementControls(setPlayerPos);
 
   const npcs: NPC[] = [
     {
@@ -70,26 +74,6 @@ export default function GamePage() {
   useEffect(() => {
     const saved = localStorage.getItem("titanCityAvatar");
     if (saved) setAvatar(saved);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      setPlayerPos((prev) => {
-        const baseSpeed = 10;
-        const speed = e.shiftKey ? baseSpeed * 2 : baseSpeed;
-        switch (e.key) {
-          case "ArrowUp": return { ...prev, y: prev.y - speed };
-          case "ArrowDown": return { ...prev, y: prev.y + speed };
-          case "ArrowLeft": return { ...prev, x: prev.x - speed };
-          case "ArrowRight": return { ...prev, x: prev.x + speed };
-          case " ": return { ...prev, y: prev.y - speed * 3 }; // jump with spacebar
-          default: return prev;
-        }
-      });
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -155,17 +139,8 @@ export default function GamePage() {
 
   return (
     <div className="relative w-screen h-screen bg-gray-950 overflow-hidden">
-      <h2 className="text-white text-xl p-4">TitanCity - {zone}</h2>
-
-      {/* Minimap */}
-      <div className="absolute top-4 left-4 bg-gray-800 border border-gray-600 rounded-md p-2 w-32 h-32">
-        <div className="relative w-full h-full bg-black">
-          <div
-            className="absolute w-2 h-2 bg-teal-400 rounded-full"
-            style={{ top: playerPos.y / 10, left: playerPos.x / 10 }}
-          />
-        </div>
-      </div>
+      {/* UI Overlay */}
+      <GameUI avatar={avatar} zone={zone} />
 
       {/* Player Avatar */}
       <div
