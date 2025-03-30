@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 
-export default function usePetFollow(playerPos: { x: number; y: number }, setPetPos: (pos: { x: number; y: number }) => void) {
+export default function usePetFollow(
+  playerPos: { x: number; y: number },
+  setPetPos: (pos: { x: number; y: number }) => void
+) {
   useEffect(() => {
     const followInterval = setInterval(() => {
       setPetPos((prev) => {
